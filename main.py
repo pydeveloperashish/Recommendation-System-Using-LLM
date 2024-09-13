@@ -12,30 +12,22 @@ load_dotenv()
 
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
-def process_user_input(user_input, history):
+def process_user_input(user_input):
     template = """
-    Previous interactions:
-    {history}
-
-    New user request:
+    Extract key information from the following user request:
     {user_input}
-    
-    Based on the previous interactions and the new user request, extract key information.
-    If the new request is refining or changing previous requirements, focus on the changes or additions.
     
     Provide the output in the following format:
     Product Type:
     Platform:
     Key Features:
-    
-    Also, briefly explain how this differs from or builds upon previous requests.
     """
     
-    prompt = PromptTemplate(template=template, input_variables=["history", "user_input"])
+    prompt = PromptTemplate(template=template, input_variables=["user_input"])
     llm = ChatOpenAI(temperature=0)
     chain = LLMChain(llm=llm, prompt=prompt)
     
-    return chain.run(history=history, user_input=user_input)
+    return chain.run(user_input)
 
 def get_recommendations(vectorstore, processed_input, top_k=3):
     results = vectorstore.similarity_search(processed_input, k=top_k)
@@ -48,12 +40,6 @@ def display_recommendations(recommendations, title):
             st.write(f"**Platform:** {doc.metadata['platform']}")
             st.write(f"**Description:** {doc.page_content[:200]}...")
 
-def format_history(history):
-    formatted = ""
-    for i, (input, processed, _) in enumerate(history, 1):
-        formatted += f"Query {i}:\nUser Input: {input}\nProcessed Output: {processed}\n\n"
-    return formatted
-
 def main():
     st.title("Product Recommendation System")
 
@@ -62,49 +48,37 @@ def main():
     vector_db = FAISS.load_local('faiss-index', embeddings, allow_dangerous_deserialization=True)
 
     # Initialize session state
-    if 'history' not in st.session_state:
-        st.session_state.history = []
+    if 'recommendations' not in st.session_state:
+        st.session_state.recommendations = None
+    if 'processed_input' not in st.session_state:
+        st.session_state.processed_input = None
 
-    # Initial input
-    user_input = st.text_area("Enter your requirements:", height=100, key="initial_input")
+    # User input
+    user_input = st.text_area("Enter your requirements:", height=100)
 
-    if st.button("Get Recommendations"):
-        if user_input:
-            history_context = format_history(st.session_state.history)
-            processed_input = process_user_input(user_input, history_context)
+    if st.button("Get Recommendations") or st.session_state.recommendations is not None:
+        if user_input or st.session_state.processed_input is not None:
+            if user_input:
+                st.session_state.processed_input = process_user_input(user_input)
+            
             st.subheader("Processed Input:")
-            st.write(processed_input)
+            st.write(st.session_state.processed_input)
 
-            recommendations = get_recommendations(vector_db, processed_input)
-            st.session_state.history.append((user_input, processed_input, recommendations))
+            st.session_state.recommendations = get_recommendations(vector_db, st.session_state.processed_input)
+            display_recommendations(st.session_state.recommendations, "Top Recommendations")
 
-    # Display all recommendations
-    for i, (input, processed, recs) in enumerate(st.session_state.history):
-        st.markdown(f"**Query {i+1}:** {input}")
-        st.markdown(f"**Processed:** {processed}")
-        display_recommendations(recs, f"Recommendations for Query {i+1}")
-
-    # Check satisfaction only if there are recommendations
-    if st.session_state.history:
-        satisfaction = st.radio("Are you satisfied with these recommendations?", ('Yes', 'No'))
-        if st.button("Submit"):
-            if satisfaction == 'Yes':
-                st.success("Thank you for using the Product Recommendation System!")
-            else:
-                st.write("Please provide more specific or different requirements:")
-                new_input = st.text_area("Enter your new requirements:", height=100, key="new_input")
-                if st.button("Get New Recommendations"):
-                    if new_input:
-                        history_context = format_history(st.session_state.history)
-                        processed_input = process_user_input(new_input, history_context)
-                        st.subheader("Processed Input:")
-                        st.write(processed_input)
-
-                        new_recommendations = get_recommendations(vector_db, processed_input)
-                        st.session_state.history.append((new_input, processed_input, new_recommendations))
-                        st.experimental_rerun()  # Rerun to display new recommendations
-                    else:
-                        st.warning("Please enter your new requirements.")
+            # Check satisfaction
+            satisfaction = st.radio("Are you satisfied with these recommendations?", ('Yes', 'No'))
+            if st.button("Submit"):
+                if satisfaction == 'Yes':
+                    st.success("Thank you for using the Product Recommendation System!")
+                    st.session_state.recommendations = None  # Reset for next use
+                else:
+                    # Get new recommendations without new input
+                    st.session_state.recommendations = get_recommendations(vector_db, st.session_state.processed_input, top_k=6)
+                    st.experimental_rerun()
+        else:
+            st.warning("Please enter your requirements.")
 
 if __name__ == "__main__":
     main()
