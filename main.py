@@ -1,71 +1,110 @@
 import streamlit as st
-from langchain.llms import OpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
-from langchain.vectorstores import FAISS
-from langchain.embeddings import OpenAIEmbeddings
-import os 
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import OpenAIEmbeddings
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
-# User Input Processing
-def process_user_input(user_input):
+def process_user_input(user_input, history):
     template = """
-    Extract key information from the following user request:
+    Previous interactions:
+    {history}
+
+    New user request:
     {user_input}
+    
+    Based on the previous interactions and the new user request, extract key information.
+    If the new request is refining or changing previous requirements, focus on the changes or additions.
     
     Provide the output in the following format:
     Product Type:
     Platform:
     Key Features:
+    
+    Also, briefly explain how this differs from or builds upon previous requests.
     """
     
-    prompt = PromptTemplate(template=template, input_variables=["user_input"])
-    llm = OpenAI(temperature=0)
+    prompt = PromptTemplate(template=template, input_variables=["history", "user_input"])
+    llm = ChatOpenAI(temperature=0)
     chain = LLMChain(llm=llm, prompt=prompt)
-    return chain.run(user_input)
+    
+    return chain.run(history=history, user_input=user_input)
 
-# Recommendation System
 def get_recommendations(vectorstore, processed_input, top_k=3):
     results = vectorstore.similarity_search(processed_input, k=top_k)
     return results
 
-# Streamlit UI
-st.title("Product Recommendation System")
-
-# Load embeddings and vector database
-@st.cache_resource
-def load_vectorstore():
-    embeddings = OpenAIEmbeddings()
-    return FAISS.load_local('faiss-index', embeddings, allow_dangerous_deserialization=True)
-
-vector_db = load_vectorstore()
-
-# User input
-user_input = st.text_area("Enter your requirements:", height=100)
-
-if st.button("Get Recommendations"):
-    if user_input:
-        processed_input = process_user_input(user_input)
-        
-        st.subheader("Processed Input:")
-        st.text(processed_input)
-        
-        st.subheader("Top Recommendations:")
-        
-        recommendations = get_recommendations(vector_db, processed_input)
-        
-        for i, doc in enumerate(recommendations, 1):
-            st.markdown(f"**Recommendation {i}:**")
-            st.write(f"**Product:** {doc.metadata['name']}")
+def display_recommendations(recommendations, title):
+    st.subheader(title)
+    for i, doc in enumerate(recommendations, 1):
+        with st.expander(f"Recommendation {i}: {doc.metadata['name']}"):
             st.write(f"**Platform:** {doc.metadata['platform']}")
             st.write(f"**Description:** {doc.page_content[:200]}...")
-            st.markdown("---")
-        
-        satisfaction = st.radio("Are you satisfied with these recommendations?", ("Yes", "No"))
-        if satisfaction == "Yes":
-            st.success("Great! Thank you for using the Product Recommendation System!")
-        else:
-            st.info("Feel free to modify your requirements and try again.")
-    else:
-        st.warning("Please enter your requirements.")
+
+def format_history(history):
+    formatted = ""
+    for i, (input, processed, _) in enumerate(history, 1):
+        formatted += f"Query {i}:\nUser Input: {input}\nProcessed Output: {processed}\n\n"
+    return formatted
+
+def main():
+    st.title("Product Recommendation System")
+
+    # Load the vector database
+    embeddings = OpenAIEmbeddings()
+    vector_db = FAISS.load_local('faiss-index', embeddings, allow_dangerous_deserialization=True)
+
+    # Initialize session state
+    if 'history' not in st.session_state:
+        st.session_state.history = []
+
+    # Initial input
+    user_input = st.text_area("Enter your requirements:", height=100, key="initial_input")
+
+    if st.button("Get Recommendations"):
+        if user_input:
+            history_context = format_history(st.session_state.history)
+            processed_input = process_user_input(user_input, history_context)
+            st.subheader("Processed Input:")
+            st.write(processed_input)
+
+            recommendations = get_recommendations(vector_db, processed_input)
+            st.session_state.history.append((user_input, processed_input, recommendations))
+
+    # Display all recommendations
+    for i, (input, processed, recs) in enumerate(st.session_state.history):
+        st.markdown(f"**Query {i+1}:** {input}")
+        st.markdown(f"**Processed:** {processed}")
+        display_recommendations(recs, f"Recommendations for Query {i+1}")
+
+    # Check satisfaction only if there are recommendations
+    if st.session_state.history:
+        satisfaction = st.radio("Are you satisfied with these recommendations?", ('Yes', 'No'))
+        if st.button("Submit"):
+            if satisfaction == 'Yes':
+                st.success("Thank you for using the Product Recommendation System!")
+            else:
+                st.write("Please provide more specific or different requirements:")
+                new_input = st.text_area("Enter your new requirements:", height=100, key="new_input")
+                if st.button("Get New Recommendations"):
+                    if new_input:
+                        history_context = format_history(st.session_state.history)
+                        processed_input = process_user_input(new_input, history_context)
+                        st.subheader("Processed Input:")
+                        st.write(processed_input)
+
+                        new_recommendations = get_recommendations(vector_db, processed_input)
+                        st.session_state.history.append((new_input, processed_input, new_recommendations))
+                        st.experimental_rerun()  # Rerun to display new recommendations
+                    else:
+                        st.warning("Please enter your new requirements.")
+
+if __name__ == "__main__":
+    main()
