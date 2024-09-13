@@ -29,12 +29,10 @@ def process_user_input(user_input):
     
     return chain.run(user_input)
 
-# Recommendation System
 def get_recommendations(vectorstore, processed_input, top_k=3):
     results = vectorstore.similarity_search(processed_input, k=top_k)
     return results
 
-# Streamlit app
 def main():
     st.title("Product Recommendation System")
 
@@ -42,28 +40,51 @@ def main():
     embeddings = OpenAIEmbeddings()
     vector_db = FAISS.load_local('faiss-index', embeddings, allow_dangerous_deserialization=True)
 
-    # User input
-    user_input = st.text_area("Enter your requirements:", height=100)
+    # Initialize session state
+    if 'stage' not in st.session_state:
+        st.session_state.stage = 'input'
 
-    if st.button("Get Recommendations"):
-        if user_input:
-            # Process user input
-            processed_input = process_user_input(user_input)
-            st.subheader("Processed Input:")
-            st.write(processed_input)
+    if st.session_state.stage == 'input':
+        user_input = st.text_area("Enter your requirements:", height=100)
 
-            # Get recommendations
-            recommendations = get_recommendations(vector_db, processed_input)
+        if st.button("Get Recommendations"):
+            if user_input:
+                st.session_state.user_input = user_input
+                st.session_state.stage = 'recommendations'
+                st.experimental_rerun()
+            else:
+                st.warning("Please enter your requirements.")
 
-            # Display recommendations
-            st.subheader("Top Recommendations:")
-            for i, doc in enumerate(recommendations, 1):
-                with st.expander(f"Recommendation {i}: {doc.metadata['name']}"):
-                    st.write(f"**Platform:** {doc.metadata['platform']}")
-                    st.write(f"**Description:** {doc.page_content[:200]}...")
+    elif st.session_state.stage == 'recommendations':
+        # Process user input
+        processed_input = process_user_input(st.session_state.user_input)
+        st.subheader("Processed Input:")
+        st.write(processed_input)
 
-        else:
-            st.warning("Please enter your requirements.")
+        # Get recommendations
+        recommendations = get_recommendations(vector_db, processed_input)
+
+        # Display recommendations
+        st.subheader("Top Recommendations:")
+        for i, doc in enumerate(recommendations, 1):
+            with st.expander(f"Recommendation {i}: {doc.metadata['name']}"):
+                st.write(f"**Platform:** {doc.metadata['platform']}")
+                st.write(f"**Description:** {doc.page_content[:200]}...")
+
+        # Ask if user is satisfied
+        satisfaction = st.radio("Are you satisfied with these recommendations?", ('Yes', 'No'))
+        if st.button("Submit"):
+            if satisfaction == 'Yes':
+                st.session_state.stage = 'end'
+            else:
+                st.session_state.stage = 'input'
+            st.experimental_rerun()
+
+    elif st.session_state.stage == 'end':
+        st.success("Thank you for using the Product Recommendation System!")
+        if st.button("Start Over"):
+            st.session_state.stage = 'input'
+            st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
