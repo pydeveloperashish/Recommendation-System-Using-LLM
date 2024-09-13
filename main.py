@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-openai_api_key = st.secrets["OPENAI_API_KEY"]
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 def process_user_input(user_input):
     template = """
@@ -24,7 +24,7 @@ def process_user_input(user_input):
     """
     
     prompt = PromptTemplate(template=template, input_variables=["user_input"])
-    llm = ChatOpenAI(openai_api_key, temperature=0)
+    llm = ChatOpenAI(temperature=0)
     chain = LLMChain(llm=llm, prompt=prompt)
     
     return chain.run(user_input)
@@ -39,7 +39,7 @@ def main():
     st.title("Product Recommendation System")
 
     # Load the vector database
-    embeddings = OpenAIEmbeddings(openai_api_key)
+    embeddings = OpenAIEmbeddings()
     vector_db = FAISS.load_local('faiss-index', embeddings, allow_dangerous_deserialization=True)
 
     # User input
