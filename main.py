@@ -21,7 +21,7 @@ def process_user_input(user_input):
     """
     
     prompt = PromptTemplate(template=template, input_variables=["user_input"])
-    llm = OpenAI(temperature=0, openai_api_key=openai_api_key)
+    llm = OpenAI(temperature=0)
     chain = LLMChain(llm=llm, prompt=prompt)
     return chain.run(user_input)
 
