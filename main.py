@@ -54,11 +54,6 @@ def format_history(history):
         formatted += f"Query {i}:\nUser Input: {input}\nProcessed Output: {processed}\n\n"
     return formatted
 
-def reset_app():
-    st.session_state.history = []
-    st.session_state.recommendations = None
-    st.experimental_rerun()
-
 def main():
     st.title("Product Recommendation System")
 
@@ -92,17 +87,20 @@ def main():
             if st.button("Submit"):
                 if satisfaction == 'Yes':
                     st.success("Thank you for using the Product Recommendation System!")
-                    reset_app()
-                else:
+                    # Clear output and start from scratch
+                    st.session_state.history = []
+                    st.session_state.recommendations = None
+                    st.rerun()  # Restart the app to clear all outputs
+                elif satisfaction == 'No':
                     # Get new recommendations without new input, but considering history
                     history_context = format_history(st.session_state.history)
                     refined_input = process_user_input(f"{processed_input} Please provide more diverse recommendations", history_context)
                     st.session_state.recommendations = get_recommendations(vector_db, refined_input, top_k=6)
-                    st.rerun()
+                    st.rerun()  # Refresh the app to show new recommendations
         else:
             st.warning("Please enter your requirements.")
 
-    # Display history
+    # Display history in sidebar
     if st.session_state.history:
         st.sidebar.subheader("Output History:")
         for i, (input, processed) in enumerate(st.session_state.history, 1):
