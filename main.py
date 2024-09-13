@@ -100,12 +100,12 @@ def main():
             st.warning("Please enter your requirements.")
 
     # Display history in sidebar
-    if st.session_state.history:
-        st.sidebar.subheader("Output History:")
-        for i, (input, processed) in enumerate(st.session_state.history, 1):
-            with st.sidebar.expander(f"Query {i}"):
-                st.write(f"**User Input:** {input}")
-                st.write(f"**Processed Output:** {processed}")
+    # if st.session_state.history:
+    #     st.sidebar.subheader("Output History:")
+    #     for i, (input, processed) in enumerate(st.session_state.history, 1):
+    #         with st.sidebar.expander(f"Query {i}"):
+    #             st.write(f"**User Input:** {input}")
+    #             st.write(f"**Processed Output:** {processed}")
 
 if __name__ == "__main__":
     main()
