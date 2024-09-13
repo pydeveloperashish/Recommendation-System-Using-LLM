@@ -61,8 +61,8 @@ def main():
             if user_input:
                 st.session_state.processed_input = process_user_input(user_input)
             
-            st.subheader("Processed Input:")
-            st.write(st.session_state.processed_input)
+            # st.subheader("Processed Input:")
+            # st.write(st.session_state.processed_input)
 
             st.session_state.recommendations = get_recommendations(vector_db, st.session_state.processed_input)
             display_recommendations(st.session_state.recommendations, "Top Recommendations")
