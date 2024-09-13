@@ -36,7 +36,7 @@ st.title("Product Recommendation System")
 # Load embeddings and vector database
 @st.cache_resource
 def load_vectorstore():
-    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+    embeddings = OpenAIEmbeddings()
     return FAISS.load_local('faiss-index', embeddings, allow_dangerous_deserialization=True)
 
 vector_db = load_vectorstore()
