@@ -96,7 +96,6 @@ def main():
                     history_context = format_history(st.session_state.history)
                     refined_input = process_user_input(f"{processed_input} Please provide more diverse recommendations", history_context)
                     st.session_state.recommendations = get_recommendations(vector_db, refined_input, top_k=6)
-                    st.rerun()  # Refresh the app to show new recommendations
         else:
             st.warning("Please enter your requirements.")
 
