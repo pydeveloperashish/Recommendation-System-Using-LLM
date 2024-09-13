@@ -87,6 +87,7 @@ def main():
             if st.button("Submit"):
                 if satisfaction == 'Yes':
                     st.success("Thank you for using the Product Recommendation System!")
+                    st.rerun()
                 else:
                     # Get new recommendations without new input, but considering history
                     history_context = format_history(st.session_state.history)
