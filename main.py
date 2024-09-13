@@ -54,6 +54,14 @@ def format_history(history):
         formatted += f"Query {i}:\nUser Input: {input}\nProcessed Output: {processed}\n\n"
     return formatted
 
+
+# Function to reset the app
+def reset_app():
+    st.session_state.reset = True
+    st.session_state.user_input = ''
+    st.session_state.processed_output = ''
+    st.session_state.satisfaction = None
+
 def main():
     st.title("Product Recommendation System")
 
@@ -87,7 +95,7 @@ def main():
             if st.button("Submit"):
                 if satisfaction == 'Yes':
                     st.success("Thank you for using the Product Recommendation System!")
-                    st.rerun()
+                    reset_app()
                 else:
                     # Get new recommendations without new input, but considering history
                     history_context = format_history(st.session_state.history)
