@@ -54,13 +54,10 @@ def format_history(history):
         formatted += f"Query {i}:\nUser Input: {input}\nProcessed Output: {processed}\n\n"
     return formatted
 
-
-# Function to reset the app
 def reset_app():
-    st.session_state.reset = True
-    st.session_state.user_input = ''
-    st.session_state.processed_output = ''
-    st.session_state.satisfaction = None
+    st.session_state.history = []
+    st.session_state.recommendations = None
+    st.experimental_rerun()
 
 def main():
     st.title("Product Recommendation System")
@@ -101,17 +98,17 @@ def main():
                     history_context = format_history(st.session_state.history)
                     refined_input = process_user_input(f"{processed_input} Please provide more diverse recommendations", history_context)
                     st.session_state.recommendations = get_recommendations(vector_db, refined_input, top_k=6)
-                st.rerun()
+                    st.rerun()
         else:
             st.warning("Please enter your requirements.")
 
     # Display history
-    # if st.session_state.history:
-    #     st.subheader("Output history History:")
-    #     for i, (input, processed) in enumerate(st.session_state.history, 1):
-    #         with st.sidebar(f"Query {i}"):
-    #             st.write(f"**User Input:** {input}")
-    #             st.write(f"**Processed:** {processed}")
+    if st.session_state.history:
+        st.sidebar.subheader("Output History:")
+        for i, (input, processed) in enumerate(st.session_state.history, 1):
+            with st.sidebar.expander(f"Query {i}"):
+                st.write(f"**User Input:** {input}")
+                st.write(f"**Processed Output:** {processed}")
 
 if __name__ == "__main__":
     main()
