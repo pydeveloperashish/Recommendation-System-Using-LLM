@@ -1,8 +1,9 @@
 faiss-cpu
 pandas
 numpy
-langchain_community 
+langchain-community 
 langchain-openai 
 langchainhub 
 chromadb 
 langchain
+streamlit
