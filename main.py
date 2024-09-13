@@ -92,8 +92,8 @@ def main():
                     # Get new recommendations without new input, but considering history
                     history_context = format_history(st.session_state.history)
                     refined_input = process_user_input("Please provide more diverse recommendations", history_context)
-                    st.session_state.recommendations = get_recommendations(vector_db, refined_input, top_k=6)
-                    st.experimental_rerun()
+                    st.session_state.recommendations = get_recommendations(vector_db, refined_input, top_k=3)
+                st.rerun()
         else:
             st.warning("Please enter your requirements.")
 
