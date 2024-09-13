@@ -4,9 +4,9 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.vectorstores import FAISS
 from langchain.embeddings import OpenAIEmbeddings
+import os 
 
-# Access the API key from Streamlit secrets
-openai_api_key = st.secrets["OPENAI_API_KEY"]
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 # User Input Processing
 def process_user_input(user_input):
